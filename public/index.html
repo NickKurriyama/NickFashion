@@ -141,8 +141,19 @@ return `<div class="fl" style="justify-content:space-between"><h2 style="margin:
 <div class="k"><div class="cd pn" style="margin:0"><span class="mu">Doanh thu</span><b>${fm(rev)}</b></div><div class="cd pn" style="margin:0"><span class="mu">Tổng số đơn</span><b>${O.length}</b></div><div class="cd pn" style="margin:0"><span class="mu">Tỷ lệ hoàn hàng</span><b>${rt}%</b></div><div class="cd pn" style="margin:0;background:var(--nv);color:#fff"><span style="color:#C5D1E6">Lượt dùng voucher</span><b style="color:var(--gd)">${vu}</b></div></div>
 <div class="cd pn"><b>Đơn theo trạng thái</b><div aria-hidden="true" style="display:flex;align-items:flex-end;gap:10px;height:140px;margin-top:14px">${cn.map(n=>`<div style="flex:1;height:${Math.max(4,n/mx*100)}%;background:var(--ac);border-radius:6px"></div>`).join('')}</div><div class="r" style="margin-top:8px;font-size:11px;color:var(--mu);flex-wrap:nowrap">${ST.map((s,i)=>`<span style="text-align:center">${s}<br><b>${cn[i]}</b></span>`).join('')}</div></div>
 <div class="cd pn tw"><b>Đơn hàng</b><table><tr><th>Mã đơn</th><th>Khách</th><th>Tổng</th><th>Thanh toán</th><th>Trạng thái</th><th></th></tr>${O.map(o=>`<tr><td>${o.id}</td><td>${o.u}</td><td>${fm(o.total)}</td><td>${o.pay}</td><td>${pill(o.st)}</td><td>${act(o)?`<button class="b2" onclick="adv('${o.id}')">${act(o)}</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">Chưa có đơn hàng.</td></tr>'}</table></div>
-<div class="cd pn tw"><b>Kho hàng &amp; Voucher</b><table><tr><th>Sản phẩm</th><th>Tồn kho</th></tr>${P.map(p=>`<tr><td>${p.name}</td><td>${S.stock[p.id]<=5?`<span class="pl w">${S.stock[p.id]} — sắp hết</span>`:S.stock[p.id]}</td></tr>`).join('')}</table>
-<table style="margin-top:16px"><tr><th>Mã</th><th>Ưu đãi</th><th>Hạn dùng</th><th>Đã dùng / Giới hạn</th></tr>${Object.entries(V).map(([c,v])=>`<tr><td><b>${c}</b></td><td>${v.t=='fix'?fm(v.v):v.v+'% (tối đa '+fm(v.max)+')'} · đơn từ ${fm(v.min)}</td><td>${v.exp}</td><td>${S.used[c]||0} / ${v.lim}</td></tr>`).join('')}</table></div>`}
+<div class="cd pn tw"><b>Kho hàng</b><table><tr><th>Sản phẩm</th><th>Tồn kho</th><th>Cập nhật số lượng</th></tr>${P.map(p=>`<tr><td>${p.name}</td><td>${S.stock[p.id]<=5?`<span class="pl ${S.stock[p.id]==0?'e':'w'}">${S.stock[p.id]==0?'Hết hàng':S.stock[p.id]+' — sắp hết'}</span>`:S.stock[p.id]}</td>
+<td><div class="r" style="flex-wrap:nowrap;max-width:240px"><input id="st${p.id}" type="number" min="0" value="${S.stock[p.id]}" aria-label="Số lượng ${p.name}"><button class="b2" style="flex:0 0 auto" onclick="setStock(${p.id})">Lưu</button></div></td></tr>`).join('')}</table></div>
+<div class="cd pn tw"><b>Voucher</b><table><tr><th>Mã</th><th>Ưu đãi</th><th>Hạn dùng</th><th>Đã dùng</th><th>Giới hạn lượt</th></tr>${Object.entries(V).map(([c,v])=>`<tr><td><b>${c}</b></td><td>${v.t=='fix'?fm(v.v):v.v+'% (tối đa '+fm(v.max)+')'} · đơn từ ${fm(v.min)}</td><td>${v.exp}</td><td>${S.used[c]||0}${(S.used[c]||0)>=v.lim?' <span class="pl e">Hết lượt</span>':''}</td>
+<td><div class="r" style="flex-wrap:nowrap;max-width:200px"><input id="lm${c}" type="number" min="0" value="${v.lim}" aria-label="Giới hạn ${c}"><button class="b2" style="flex:0 0 auto" onclick="setLim('${c}')">Lưu</button></div></td></tr>`).join('')}</table>
+<div class="lb" style="margin-top:20px">Tạo voucher mới</div>
+<div class="r" style="align-items:end"><div><label class="lb" for="nvc">Mã</label><input id="nvc" placeholder="TET100"></div>
+<div><label class="lb" for="nvt">Loại</label><select id="nvt"><option value="fix">Giảm tiền cố định</option><option value="pct">Giảm %</option></select></div>
+<div><label class="lb" for="nvv">Giá trị (đ hoặc %)</label><input id="nvv" type="number" min="1"></div>
+<div><label class="lb" for="nvm">Giảm tối đa (chỉ loại %)</label><input id="nvm" type="number" min="1"></div>
+<div><label class="lb" for="nvn">Đơn tối thiểu</label><input id="nvn" type="number" min="0"></div>
+<div><label class="lb" for="nve">Hạn dùng</label><input id="nve" type="date"></div>
+<div><label class="lb" for="nvl">Số lượt</label><input id="nvl" type="number" min="1"></div>
+<button class="bt" style="flex:0 0 auto" onclick="newV()">Tạo voucher</button></div></div>`}
 function render(){let r=location.hash.slice(1)||'shop';const V2={shop,cart,checkout,orders,admin};
 if(S.admin)r='admin';else if(r=='admin'||!V2[r]||(!S.user&&(r=='cart'||r=='checkout')))r='shop';
 E('#app').innerHTML=V2[r]();
@@ -176,6 +187,13 @@ try{const o=await api('/orders',{body:{items:S.cart.map(l=>({id:l.id,size:l.size
 if(o.st!='Thanh toán lỗi'){S.cart=[];S.v=null;S.vd=null;save()}await sync();location.hash='orders';toast(o.st=='Thanh toán lỗi'?'Thanh toán lỗi — đang hoàn tiền':'Đặt hàng thành công')}catch(e){toast(e.message);sync()}}
 async function act(u,id){try{await api(u,{body:{}});await sync()}catch(e){toast(e.message)}}
 const cancel=id=>act('/orders/'+id+'/cancel'),ret=id=>act('/orders/'+id+'/return'),adv=id=>act('/admin/orders/'+id+'/advance');
+
+/* ---------- Quản trị: tồn kho & voucher ---------- */
+async function setStock(id){try{await api('/admin/products/'+id+'/stock',{body:{stock:+E('#st'+id).value}});await sync();toast('Đã cập nhật tồn kho')}catch(e){toast(e.message)}}
+async function setLim(code){try{await api('/admin/vouchers/'+encodeURIComponent(code)+'/limit',{body:{limit:+E('#lm'+code).value}});await sync();toast('Đã cập nhật số lượt voucher')}catch(e){toast(e.message)}}
+async function newV(){const g=i=>E('#nv'+i).value.trim();
+try{await api('/admin/vouchers',{body:{code:g('c'),type:g('t'),value:+g('v'),max:+g('m')||null,min:+g('n')||0,exp:g('e'),limit:+g('l')}});await sync();toast('Đã tạo voucher')}catch(e){toast(e.message)}}
+
 addEventListener('hashchange',()=>{render();scrollTo(0,0)});sync();
 </script>
 </body>

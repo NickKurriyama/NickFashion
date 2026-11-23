@@ -113,6 +113,35 @@ app.post('/api/admin/orders/:id/advance',auth,admin,(req,res)=>{const o=db.prepa
     else if(o.status==='Yêu cầu trả hàng'){restock(o.id);setSt(o.id,'Đã hoàn tiền','Shop đã hoàn tiền cho đơn này.')}
     else if(o.status==='Thanh toán lỗi')setSt(o.id,'Đã hoàn tiền','Shop đã hoàn tiền cho đơn này.');
     else throw new Error('Đơn không có bước tiếp theo')})();res.json({ok:true})});
+/* Quản trị: tồn kho & voucher */
+app.post('/api/admin/products/:id/stock',auth,admin,(req,res)=>{
+  const n=Number(req.body.stock);
+  if(!Number.isInteger(n)||n<0||n>100000)return bad(res,'Số lượng phải là số nguyên từ 0 đến 100000');
+  const r=db.prepare('UPDATE products SET stock=? WHERE id=?').run(n,req.params.id);
+  r.changes?res.json({ok:true}):bad(res,'Không tìm thấy sản phẩm',404)});
 
+app.post('/api/admin/vouchers/:code/limit',auth,admin,(req,res)=>{
+  const n=Number(req.body.limit);
+  if(!Number.isInteger(n)||n<0||n>1000000)return bad(res,'Số lượt phải là số nguyên từ 0 trở lên');
+  const r=db.prepare('UPDATE vouchers SET usage_limit=? WHERE code=?').run(n,req.params.code.toUpperCase());
+  r.changes?res.json({ok:true}):bad(res,'Không tìm thấy voucher',404)});
+
+app.post('/api/admin/vouchers',auth,admin,(req,res)=>{
+  const b=req.body,code=String(b.code||'').trim().toUpperCase(),value=Number(b.value),min=Number(b.min||0),limit=Number(b.limit);
+  if(!/^[A-Z0-9]{3,20}$/.test(code))return bad(res,'Mã gồm 3-20 ký tự chữ hoặc số, không dấu');
+  if(!Number.isInteger(value)||value<1)return bad(res,'Giá trị giảm không hợp lệ');
+  if(!Number.isInteger(min)||min<0)return bad(res,'Đơn tối thiểu không hợp lệ');
+  if(!Number.isInteger(limit)||limit<1)return bad(res,'Số lượt dùng phải từ 1 trở lên');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(b.exp||''))return bad(res,'Hạn dùng không hợp lệ');
+  const fix=b.type==='fix';let max=null,type='fix';
+  if(!fix){
+    if(value>100)return bad(res,'Giảm % không được quá 100');
+    max=Number(b.max);if(!Number.isInteger(max)||max<1)return bad(res,'Nhập mức giảm tối đa cho voucher %');
+    type=(db.prepare("SELECT type FROM vouchers WHERE type!='fix' LIMIT 1").get()||{}).type||'pct'}
+  try{db.prepare('INSERT INTO vouchers(code,type,value,max_off,min_order,expires_at,usage_limit) VALUES(?,?,?,?,?,?,?)').run(code,type,value,max,min,b.exp,limit)}
+  catch(e){return bad(res,'Mã này đã tồn tại',409)}
+  res.json({ok:true})});
+
+  
 app.use((err,req,res,next)=>{console.error(err);bad(res,err.message||'Lỗi máy chủ',err.status||400)});
 app.listen(PORT,()=>console.log('Nick Fashion chạy tại http://localhost:'+PORT));
