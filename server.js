@@ -83,6 +83,7 @@ const restock=id=>db.prepare('SELECT product_id,qty FROM order_items WHERE order
 const setSt=(id,st,note)=>db.prepare('UPDATE orders SET status=?,note=? WHERE id=?').run(st,note,id);
 app.get('/api/orders',auth,(req,res)=>res.json(db.prepare(Q+' WHERE o.user_id=? ORDER BY o.rowid DESC').all(req.user.id).map(mapO)));
 app.post('/api/orders',auth,(req,res)=>{const{items,voucher,payment,address,simulateFail}=req.body;
+  if(req.user.role==='admin')return bad(res,'Tài khoản quản trị không thể mua hàng',403);
   if(!Array.isArray(items)||!items.length||!address||!['Ngân hàng','Ví điện tử','COD'].includes(payment))return bad(res,'Thông tin đơn hàng không hợp lệ');
   const id='NF'+Date.now().toString(36).toUpperCase()+crypto.randomInt(10,99);
   db.transaction(()=>{let sub=0;const L=[],need={};

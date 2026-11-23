@@ -50,8 +50,8 @@ footer{background:var(--nv);color:#C5D1E6;padding:28px 0;font-size:14px}
 </head>
 <body>
 <header><div class="c"><a class="lg" href="#shop">NICK<i>.</i>FASHION</a>
-<nav aria-label="Điều hướng"><a id="n-shop" href="#shop">Cửa hàng</a><a id="n-orders" href="#orders">Đơn hàng</a><a id="n-admin" href="#admin">Quản trị</a></nav>
-<div class="hr"><button class="hd" id="ba" onclick="acc()">Đăng nhập</button><button class="hd" onclick="location.hash='cart'" aria-label="Giỏ hàng">Giỏ hàng <b id="cn">0</b></button></div></div></header>
+<nav aria-label="Điều hướng"><a id="n-shop" href="#shop">Cửa hàng</a><a id="n-orders" href="#orders">Đơn hàng</a><a id="n-admin" href="#admin" hidden>Quản trị</a></nav>
+<div class="hr"><button class="hd" id="ba" onclick="acc()">Đăng nhập</button><button class="hd" id="bc" onclick="location.hash='cart'" aria-label="Giỏ hàng">Giỏ hàng <b id="cn">0</b></button></div></div></header>
 <main class="c" id="app"></main>
 <footer><div class="c">Nick Fashion · Quần áo · Giày dép · Phụ kiện</div></footer>
 <dialog id="dg"><h2 style="margin:0;font-size:22px">Tài khoản</h2><div id="am"></div><button class="b2" style="width:100%;margin-top:12px" onclick="E('#dg').close()">Đóng</button></dialog>
@@ -61,9 +61,9 @@ const E=s=>document.querySelector(s),fm=n=>n.toLocaleString('vi-VN')+'đ';
 const P=[],V={};
 const IC={Nam:'M8 4L3 7l2 4 3-1v10h8V10l3 1 2-4-5-3a4 4 0 0 1-8 0z','Giày dép':'M3 15c4 0 5-5 8-5l2 3c3 0 8 1 8 4v1H3z','Phụ kiện':'M4 8h16v12H4zM9 8V6a3 3 0 0 1 6 0v2'};IC['Nữ']=IC.Nam;
 const ico=c=>`<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="${IC[c]}"/></svg>`;
-let S={user:null,me:null,token:null,cart:[],orders:[],used:{},stock:{},admin:false,v:null,vd:null,f:{cat:'Tất cả',size:'',color:'',max:0}};
-try{const o=JSON.parse(localStorage.getItem('nf2')||'{}');S.cart=o.cart||[];S.v=o.v||null;S.token=o.token||null}catch(e){}
-const save=()=>{try{localStorage.setItem('nf2',JSON.stringify({cart:S.cart,v:S.v,token:S.token}))}catch(e){}};
+let S={user:null,me:null,token:null,cart:[],carts:{},orders:[],used:{},stock:{},admin:false,v:null,vd:null,f:{cat:'Tất cả',size:'',color:'',max:0}};
+try{const o=JSON.parse(localStorage.getItem('nf2')||'{}');S.carts=o.carts||{};S.token=o.token||null}catch(e){}
+const save=()=>{if(S.user)S.carts[S.user]={c:S.cart,v:S.v};try{localStorage.setItem('nf2',JSON.stringify({carts:S.carts,token:S.token}))}catch(e){}};
 const pr=id=>P.find(p=>p.id==id);
 function toast(m){const t=E('#ts');t.textContent=m;t.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.opacity=0,3000)}
 function chk(c,sub){const v=S.vd&&S.vd.code==c?S.vd:null;if(!v)return{ok:0,msg:'Mã không tồn tại'};
@@ -73,7 +73,7 @@ if(sub<v.min)return{ok:0,msg:'Đơn hàng chưa đạt giá trị tối thiểu 
 return{ok:1,amt:v.t=='fix'?v.v:Math.min(Math.round(sub*v.v/100),v.max)}}
 function T(){const sub=S.cart.reduce((a,l)=>a+pr(l.id).price*l.q,0),vr=S.v&&sub?chk(S.v,sub):null,disc=vr&&vr.ok?vr.amt:0;return{sub,vr,disc,total:sub-disc}}
 const inCart=id=>S.cart.filter(l=>l.id==id).reduce((a,l)=>a+l.q,0);
-function add(id){const s=E('#s'+id).value,c=E('#c'+id).value;if(S.stock[id]-inCart(id)<1)return toast('Sản phẩm đã hết hàng');
+function add(id){if(!S.user){toast('Bạn cần đăng nhập để thêm vào giỏ hàng');return openAuth()}const s=E('#s'+id).value,c=E('#c'+id).value;if(S.stock[id]-inCart(id)<1)return toast('Sản phẩm đã hết hàng');
 const l=S.cart.find(x=>x.id==id&&x.size==s&&x.color==c);l?l.q++:S.cart.push({id,size:s,color:c,q:1});save();render();toast('Đã thêm vào giỏ hàng')}
 function qty(i,d){const l=S.cart[i],n=l.q+d;if(n<1)return;if(d>0&&S.stock[l.id]-inCart(l.id)<1)return toast('Không đủ hàng trong kho');l.q=n;save();render()}
 function del(i){S.cart.splice(i,1);save();render()}
@@ -143,8 +143,11 @@ return `<div class="fl" style="justify-content:space-between"><h2 style="margin:
 <div class="cd pn tw"><b>Đơn hàng</b><table><tr><th>Mã đơn</th><th>Khách</th><th>Tổng</th><th>Thanh toán</th><th>Trạng thái</th><th></th></tr>${O.map(o=>`<tr><td>${o.id}</td><td>${o.u}</td><td>${fm(o.total)}</td><td>${o.pay}</td><td>${pill(o.st)}</td><td>${act(o)?`<button class="b2" onclick="adv('${o.id}')">${act(o)}</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">Chưa có đơn hàng.</td></tr>'}</table></div>
 <div class="cd pn tw"><b>Kho hàng &amp; Voucher</b><table><tr><th>Sản phẩm</th><th>Tồn kho</th></tr>${P.map(p=>`<tr><td>${p.name}</td><td>${S.stock[p.id]<=5?`<span class="pl w">${S.stock[p.id]} — sắp hết</span>`:S.stock[p.id]}</td></tr>`).join('')}</table>
 <table style="margin-top:16px"><tr><th>Mã</th><th>Ưu đãi</th><th>Hạn dùng</th><th>Đã dùng / Giới hạn</th></tr>${Object.entries(V).map(([c,v])=>`<tr><td><b>${c}</b></td><td>${v.t=='fix'?fm(v.v):v.v+'% (tối đa '+fm(v.max)+')'} · đơn từ ${fm(v.min)}</td><td>${v.exp}</td><td>${S.used[c]||0} / ${v.lim}</td></tr>`).join('')}</table></div>`}
-function render(){const r=location.hash.slice(1)||'shop',V2={shop,cart,checkout,orders,admin};E('#app').innerHTML=(V2[r]||shop)();
-['shop','orders','admin'].forEach(n=>{const a=E('#n-'+n);a.toggleAttribute('aria-current',n==(r=='cart'||r=='checkout'?'shop':r))});
+function render(){let r=location.hash.slice(1)||'shop';const V2={shop,cart,checkout,orders,admin};
+if(S.admin)r='admin';else if(r=='admin'||!V2[r]||(!S.user&&(r=='cart'||r=='checkout')))r='shop';
+E('#app').innerHTML=V2[r]();
+[['shop',!S.admin],['orders',!S.admin],['admin',S.admin]].forEach(([n,show])=>{const a=E('#n-'+n);a.hidden=!show;a.toggleAttribute('aria-current',n==(r=='cart'||r=='checkout'?'shop':r))});
+E('#bc').hidden=!S.user||S.admin;
 E('#cn').textContent=S.cart.reduce((a,l)=>a+l.q,0);E('#ba').textContent=S.user?'Đăng xuất ('+((S.me||{}).name||'')+')':'Đăng nhập'}
 
 /* ---------- Kết nối backend ---------- */
@@ -153,11 +156,11 @@ const r=await fetch('/api'+p,{method:o&&o.body?'POST':'GET',headers:h,body:o&&o.
 if(!r.ok)throw new Error(d.error||'Lỗi máy chủ');return d}
 async function sync(){try{const pr=await api('/products');P.length=0;P.push(...pr);pr.forEach(p=>S.stock[p.id]=p.stock);
 let me=null;if(S.token){try{me=await api('/me')}catch(e){S.token=null}}
-S.me=me;S.user=me?String(me.id):null;S.admin=!!me&&me.role=='admin';S.orders=me?await api(S.admin?'/admin/orders':'/orders'):[];
+S.me=me;S.user=me?String(me.id):null;S.admin=!!me&&me.role=='admin';{const cc=(S.user&&S.carts[S.user])||{};S.cart=S.admin?[]:(cc.c||[]);S.v=S.admin?null:(cc.v||null)}S.orders=me?await api(S.admin?'/admin/orders':'/orders'):[];
 if(S.admin){const v=await api('/admin/vouchers');Object.keys(V).forEach(k=>delete V[k]);S.used={};v.forEach(x=>{V[x.code]=x;S.used[x.code]=x.used})}
 S.vd=null;if(S.v){try{S.vd=await api('/vouchers/'+encodeURIComponent(S.v))}catch(e){}}}catch(e){toast(e.message)}
 S.cart=S.cart.filter(l=>pr(l.id));save();render()}
-function acc(){if(S.user){S.token=null;S.me=null;S.user=null;S.admin=false;S.orders=[];save();render();toast('Đã đăng xuất')}else openAuth()}
+function acc(){if(S.user){save();S.token=null;S.me=null;S.user=null;S.admin=false;S.orders=[];S.cart=[];S.v=null;S.vd=null;save();render();toast('Đã đăng xuất')}else openAuth()}
 async function applyV(){const c=E('#vi').value.trim().toUpperCase();S.v=c||null;S.vd=null;if(c){try{S.vd=await api('/vouchers/'+encodeURIComponent(c))}catch(e){}}save();render()}
 async function sendOtp(){const v=normC(A.ch,E('#rc').value);if(!okC(A.ch,v))return toast(A.ch=='phone'?'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)':'Email không hợp lệ');
 try{const d=await api('/otp/send',{body:{contact:v}});A.ct=v;A.sent={at:Date.now(),dev:d.devCode||null};authUI();toast('Đã gửi mã OTP')}catch(e){toast(e.message)}}
@@ -170,7 +173,7 @@ try{const d=await api('/login',{body:{contact:c,password:E('#lp').value}});S.tok
 async function pay(){const pm=E('input[name=pm]:checked').value,ad=E('#ad').value.trim(),fl=!!(E('#fl')&&E('#fl').checked&&pm!='COD');
 if(!ad)return toast('Vui lòng nhập địa chỉ giao hàng');
 try{const o=await api('/orders',{body:{items:S.cart.map(l=>({id:l.id,size:l.size,color:l.color,q:l.q})),voucher:S.v,payment:pm,address:ad,simulateFail:fl}});
-if(o.st!='Thanh toán lỗi'){S.cart=[];S.v=null;S.vd=null}await sync();location.hash='orders';toast(o.st=='Thanh toán lỗi'?'Thanh toán lỗi — đang hoàn tiền':'Đặt hàng thành công')}catch(e){toast(e.message);sync()}}
+if(o.st!='Thanh toán lỗi'){S.cart=[];S.v=null;S.vd=null;save()}await sync();location.hash='orders';toast(o.st=='Thanh toán lỗi'?'Thanh toán lỗi — đang hoàn tiền':'Đặt hàng thành công')}catch(e){toast(e.message);sync()}}
 async function act(u,id){try{await api(u,{body:{}});await sync()}catch(e){toast(e.message)}}
 const cancel=id=>act('/orders/'+id+'/cancel'),ret=id=>act('/orders/'+id+'/return'),adv=id=>act('/admin/orders/'+id+'/advance');
 addEventListener('hashchange',()=>{render();scrollTo(0,0)});sync();
