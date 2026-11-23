@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: nick-fashion
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/products
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_FILE
+        value: /opt/render/project/src/storage/data.db
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+    disk:
+      name: data
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 1
